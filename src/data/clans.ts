@@ -1,0 +1,95 @@
+import type { ClanDef, ClanId } from './types';
+
+// Frei erfundene Clans – keine historischen Vorbilder oder Original-Wappen.
+const LIST: ClanDef[] = [
+  {
+    id: 'kurogane',
+    name: 'Kurogane',
+    kanji: '鉄',
+    color: '#3d3a35',
+    accent: '#d9c79c',
+    mon: 'square',
+    description: 'Eisenschmiede des Südens. Harte Krieger, abgelegene, aber sichere Heimat.',
+    startProvinces: ['satsuma', 'higo'],
+    homeProvince: 'satsuma',
+    playable: true,
+  },
+  {
+    id: 'murasaki',
+    name: 'Murasaki',
+    kanji: '紫',
+    color: '#6e4170',
+    accent: '#ecd8ea',
+    mon: 'triple',
+    description: 'Herren der Inlandsee. Kontrollieren die Seewege nach Kyushu und Shikoku.',
+    startProvinces: ['aki', 'nagato'],
+    homeProvince: 'aki',
+    playable: true,
+  },
+  {
+    id: 'akagane',
+    name: 'Akagane',
+    kanji: '赤',
+    color: '#a5342b',
+    accent: '#f3d58e',
+    mon: 'ring',
+    description: 'Ehrgeizige Emporkömmlinge im reichen Tiefland – nah an Kyōto, umringt von Feinden.',
+    startProvinces: ['owari', 'mino'],
+    homeProvince: 'owari',
+    playable: true,
+  },
+  {
+    id: 'matsukaze',
+    name: 'Matsukaze',
+    kanji: '松',
+    color: '#4e6c36',
+    accent: '#ebe4bb',
+    mon: 'pine',
+    description: 'Bergkrieger mit berühmter Reiterei. Arm an Koku, reich an Ehre.',
+    startProvinces: ['kai', 'shinano'],
+    homeProvince: 'kai',
+    playable: true,
+  },
+  {
+    id: 'kitakaze',
+    name: 'Kitakaze',
+    kanji: '風',
+    color: '#2e6f78',
+    accent: '#dcf0f2',
+    mon: 'wave',
+    description: 'Fromme Kriegsherren des Nordens. Der Winter ist ihr Verbündeter.',
+    startProvinces: ['echigo', 'dewa'],
+    homeProvince: 'echigo',
+    playable: true,
+  },
+  {
+    id: 'aoyama',
+    name: 'Aoyama',
+    kanji: '山',
+    color: '#2e4a7a',
+    accent: '#e6dbb8',
+    mon: 'mountain',
+    description: 'Geduldige Verwalter der Kanto-Ebene mit der stärksten Festung des Ostens.',
+    startProvinces: ['sagami', 'musashi'],
+    homeProvince: 'sagami',
+    playable: true,
+  },
+  {
+    id: 'ronin',
+    name: 'Unabhängige',
+    kanji: '浪',
+    color: '#a39985',
+    accent: '#4a443c',
+    mon: 'diamond',
+    description: 'Kleine Landherren, Tempel und Bauernbünde ohne gemeinsamen Herrn.',
+    startProvinces: [],
+    homeProvince: 'yamashiro',
+    playable: false,
+  },
+];
+
+export const CLANS: Record<ClanId, ClanDef> = Object.fromEntries(LIST.map((c) => [c.id, c]));
+export const CLAN_IDS: ClanId[] = LIST.map((c) => c.id);
+export const PLAYABLE_CLAN_IDS: ClanId[] = LIST.filter((c) => c.playable).map((c) => c.id);
+/** Besitzer aller Provinzen, die keinem großen Clan gehören. */
+export const NEUTRAL_CLAN: ClanId = 'ronin';
