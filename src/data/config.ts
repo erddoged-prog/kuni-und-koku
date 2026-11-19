@@ -7,10 +7,10 @@ import type { Season, Tactic, UnitRole } from './types';
 // Vorteil gegen Speere, aber anfällig für Reiter-Ansturm.
 // ===========================================================================
 export const COUNTERS: Record<UnitRole, Record<UnitRole, number>> = {
-  spear: { spear: 1.0, cavalry: 1.8, ranged: 1.1, sword: 0.85 },
-  cavalry: { spear: 0.5, cavalry: 1.0, ranged: 1.8, sword: 1.15 },
-  ranged: { spear: 1.5, cavalry: 0.7, ranged: 1.0, sword: 1.0 },
-  sword: { spear: 1.3, cavalry: 1.0, ranged: 1.3, sword: 1.0 },
+  spear: { spear: 1.0, cavalry: 1.6, ranged: 1.0, sword: 0.95 },
+  cavalry: { spear: 0.6, cavalry: 1.0, ranged: 1.6, sword: 1.1 },
+  ranged: { spear: 1.35, cavalry: 0.5, ranged: 1.0, sword: 1.0 },
+  sword: { spear: 1.2, cavalry: 1.0, ranged: 1.2, sword: 1.0 },
 };
 
 /** Speere stoppen den Ansturm der Reiterei: Multiplikator auf Charge gegen diese Rolle. */
@@ -82,7 +82,7 @@ export const TACTICS: Record<Tactic, TacticDef> = {
     rangedMod: 0.9,
     chargeMod: 1.1,
     moraleMod: 0,
-    flankBonus: 0.4,
+    flankBonus: 0.5,
     flankRisk: 0.35,
     retreatShare: 0,
   },
@@ -128,7 +128,7 @@ export const SEASONS: SeasonDef[] = [
   { id: 'spring', name: 'Frühling', kanji: '春', incomeMod: 1.0, seaOpen: true, attrition: 0, attackerMoraleMod: 0, rangedMod: 1.0, gunpowderMod: 1.0 },
   { id: 'summer', name: 'Sommer', kanji: '夏', incomeMod: 1.0, seaOpen: true, attrition: 0, attackerMoraleMod: 0, rangedMod: 1.0, gunpowderMod: 0.8 },
   { id: 'autumn', name: 'Herbst', kanji: '秋', incomeMod: 1.25, seaOpen: true, attrition: 0, attackerMoraleMod: 0, rangedMod: 1.0, gunpowderMod: 1.0 },
-  { id: 'winter', name: 'Winter', kanji: '冬', incomeMod: 0.5, seaOpen: false, attrition: 0.08, attackerMoraleMod: -2, rangedMod: 0.85, gunpowderMod: 0.7 },
+  { id: 'winter', name: 'Winter', kanji: '冬', incomeMod: 0.5, seaOpen: false, attrition: 0.08, attackerMoraleMod: -1, rangedMod: 0.85, gunpowderMod: 0.7 },
 ];
 
 // ===========================================================================
@@ -137,20 +137,28 @@ export const SEASONS: SeasonDef[] = [
 export const COMBAT = {
   /** Grundschaden-Skalierung pro Mann und Runde. */
   baseLethality: 0.035,
+  /** Zusätzlicher Faktor für Fernkampfschaden. */
+  rangedLethality: 0.45,
   /** Fernkampf-Salven vor dem Nahkampf. */
   rangedVolleys: 2,
+  /** Zusätzliche Salven, wenn der Gegner kaum Reiterei hat (Fußvolk nähert sich langsam). */
+  extraVolleysVsInfantry: 1,
   /** Maximale Nahkampfrunden. */
   maxMeleeRounds: 6,
+  /** Frontbreite: Gegen ein Ziel kämpfen im Nahkampf höchstens so viele Männer wie dieses Vielfache seiner Stärke. */
+  maxOutnumber: 2,
   /** Zufallsstreuung pro Schadenswurf (±). */
   randomSpread: 0.2,
+  /** Kriegsglück: Streuung eines Faktors pro Seite und Schlacht (±). */
+  sideLuck: 0.2,
   /** Moralschwelle: Einheit flieht, wenn Moral unter diesen Wert fällt. */
   routThreshold: 0,
   /** Moralverlust pro 10 % verlorener Mannstärke in einer Runde. */
   moraleLossPer10Pct: 1.6,
   /** Moralbonus pro General-Stern (über 1). */
-  moralePerStar: 0.8,
+  moralePerStar: 0.5,
   /** Kampfbonus pro General-Stern (über 1). */
-  combatPerStar: 0.05,
+  combatPerStar: 0.035,
   /** Kampfbonus pro Erfahrungsstufe einer Einheit. */
   combatPerExperience: 0.04,
   /** Moralbonus pro Erfahrungsstufe. */

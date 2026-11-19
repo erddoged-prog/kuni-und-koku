@@ -54,6 +54,8 @@ export interface UnitType {
   recruitTime: number;
   /** Benötigte Gebäude (alle) in der Rekrutierungsprovinz. */
   requires: BuildingRequirement[];
+  /** Feuerwaffe (leidet unter Regen/Winter). */
+  gunpowder?: boolean;
   /** Frühestes Jahr der Verfügbarkeit (z. B. Arkebusen). */
   availableFromYear?: number;
 }
