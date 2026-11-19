@@ -6,9 +6,9 @@ export const BUILDINGS: Record<BuildingId, BuildingType> = {
     name: 'Burg',
     description: 'Schützt die Provinz. Feinde müssen sie aushungern oder stürmen.',
     levels: [
-      { name: 'Palisade (Toride)', cost: 400, buildTime: 2, siegeDefense: 0.3, supplyTurns: 2, freeGarrison: 60 },
-      { name: 'Bergburg (Yamashiro)', cost: 900, buildTime: 3, siegeDefense: 0.6, supplyTurns: 4, freeGarrison: 120 },
-      { name: 'Hauptburg (Tenshu)', cost: 1800, buildTime: 4, siegeDefense: 1.0, supplyTurns: 6, freeGarrison: 180 },
+      { name: 'Palisade (Toride)', cost: 400, buildTime: 2, siegeDefense: 0.3, supplyTurns: 2 },
+      { name: 'Bergburg (Yamashiro)', cost: 900, buildTime: 3, siegeDefense: 0.6, supplyTurns: 4 },
+      { name: 'Hauptburg (Tenshu)', cost: 1800, buildTime: 4, siegeDefense: 1.0, supplyTurns: 6 },
     ],
   },
   farm: {

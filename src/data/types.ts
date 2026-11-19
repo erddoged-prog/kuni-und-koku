@@ -76,8 +76,6 @@ export interface BuildingLevel {
   siegeDefense?: number;
   /** Burg: Runden, die die Garnison einer Aushungerung standhält. */
   supplyTurns?: number;
-  /** Burg: kostenlose Mindestgarnison (Mannstärke Ashigaru), die die Provinz stellt. */
-  freeGarrison?: number;
   /** Dojo: Starterfahrung neu ausgebildeter Einheiten. */
   recruitExperience?: number;
   /** Benötigte andere Gebäude für diese Stufe. */
@@ -182,6 +180,10 @@ export interface Army {
   units: Unit[];
   /** Hat sich in dieser Runde schon bewegt. */
   moved: boolean;
+  /** Taktik, wenn diese Armee angegriffen wird. */
+  stance: Tactic;
+  /** Herkunftsprovinz des letzten Zuges (für Rückzug nach verlorenem Angriff). */
+  cameFrom?: ProvinceId;
 }
 
 export interface QueueItem {

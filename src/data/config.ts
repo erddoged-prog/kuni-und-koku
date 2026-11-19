@@ -206,8 +206,14 @@ export const CAMPAIGN = {
   peaceThreshold: -10,
   /** Ab diesem Beziehungswert akzeptiert die KI Allianzen. */
   allianceThreshold: 40,
-  /** Einkommensanteil, der bei Schulden die Moral senkt (Platzhalter). */
-  debtMoralePenalty: 2,
+  /** Garnisonen kosten diesen Anteil des normalen Unterhalts. */
+  garrisonUpkeepShare: 0.5,
+  /** Beziehungsbonus pro Runde zwischen Clans im Frieden / in Allianz. */
+  peaceRelationGain: 1,
+  /** Koku pro Beziehungspunkt bei Geschenken. */
+  giftKokuPerPoint: 25,
+  /** Kriegsmüdigkeit: Beziehungsbonus pro Runde Krieg ohne Kämpfe (erleichtert Frieden). */
+  warWearinessGain: 1,
 } as const;
 
 /** Generals-Namen für neue Heerführer (frei erfunden). */
