@@ -14,6 +14,25 @@ import { battleReportDialog, diplomacyDialog, endDialog, startDialog, tacticDial
 const AUTOSAVE = 'kuni-koku-autosave';
 const SLOT = 'kuni-koku-slot1';
 
+/** localStorage kann fehlen oder Fehler werfen (z. B. in eingebetteten Seiten). */
+const storage = {
+  get(key: string): string | null {
+    try {
+      return storage.get(key);
+    } catch {
+      return null;
+    }
+  },
+  set(key: string, value: string): boolean {
+    try {
+      storage.set(key, value);
+      return true;
+    } catch {
+      return false;
+    }
+  },
+};
+
 export class App {
   game?: GameState;
   private geo = buildGeometry();
@@ -39,8 +58,8 @@ export class App {
   }
 
   start() {
-    const auto = localStorage.getItem(AUTOSAVE);
-    this.showModal(startDialog(!!auto, !!localStorage.getItem(SLOT)), false);
+    const auto = storage.get(AUTOSAVE);
+    this.showModal(startDialog(!!auto, !!storage.get(SLOT)), false);
   }
 
   // ---------------------------------------------------------------------------
@@ -133,7 +152,7 @@ export class App {
   }
 
   private autosave() {
-    if (this.game) localStorage.setItem(AUTOSAVE, serialize(this.game));
+    if (this.game) storage.set(AUTOSAVE, serialize(this.game));
   }
 
   private doEndTurn() {
@@ -246,7 +265,7 @@ export class App {
     switch (d.action) {
       case 'pick-clan': return this.newGame(d.clan!);
       case 'continue': {
-        const raw = localStorage.getItem(AUTOSAVE);
+        const raw = storage.get(AUTOSAVE);
         if (raw) this.tryLoad(raw, 'Autosave');
         return;
       }
@@ -255,12 +274,11 @@ export class App {
       case 'diplomacy': return g && this.showModal(diplomacyDialog(g));
       case 'save':
         if (g) {
-          localStorage.setItem(SLOT, serialize(g));
-          this.toast('Spiel gespeichert.');
+          this.toast(storage.set(SLOT, serialize(g)) ? 'Spiel gespeichert.' : 'Speichern hier nicht möglich – bitte Export nutzen.', !storage.get(SLOT));
         }
         return;
       case 'load': {
-        const raw = localStorage.getItem(SLOT);
+        const raw = storage.get(SLOT);
         if (!raw) return this.toast('Kein gespeichertes Spiel vorhanden.', true);
         return this.tryLoad(raw, 'Speicherplatz');
       }
@@ -268,7 +286,7 @@ export class App {
       case 'import': return (this.$('#file') as HTMLInputElement).click();
       case 'newgame':
         this.endShown = false;
-        return this.showModal(startDialog(!!localStorage.getItem(AUTOSAVE), !!localStorage.getItem(SLOT)), !!g);
+        return this.showModal(startDialog(!!storage.get(AUTOSAVE), !!storage.get(SLOT)), !!g);
       case 'show-turn-battles': return g && this.showModal(battleReportDialog(g, this.lastTurnBattles));
       case 'focus-army': {
         const a = g?.armies[d.army!];
@@ -299,7 +317,6 @@ export class App {
       }
       case 'disband': {
         if (!g || !this.sel.province) return;
-        if (!confirm('Gewählte Einheiten wirklich entlassen?')) return;
         let s = g;
         // Von hinten entlassen, damit Indizes gültig bleiben
         for (const i of this.checkedIndices(d.from!).sort((a, b) => b - a)) {
@@ -313,7 +330,6 @@ export class App {
         if (!g) return;
         const c = d.clan!;
         const op = d.op;
-        if (op === 'war' && !confirm(`${CLANS[c].name} wirklich den Krieg erklären?`)) return;
         const res =
           op === 'war' ? declareWar(g, me!, c)
             : op === 'peace' ? proposePeace(g, me!, c)

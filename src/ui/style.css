@@ -198,3 +198,16 @@ table.dip .actions { display: flex; gap: 4px; flex-wrap: wrap; justify-content: 
 }
 #toast.bad { border-left-color: var(--vermilion); }
 #toast[hidden] { display: none; }
+
+/* ---------- Schmale Bildschirme (Handy) ---------- */
+@media (max-width: 900px) {
+  #app { height: auto; min-height: 100vh; overflow: visible; }
+  main { grid-template-columns: 1fr; }
+  #mapwrap { height: 62vh; }
+  #side { border-left: none; border-top: 2px solid var(--ink); grid-template-rows: auto 160px; }
+  #topbar { flex-wrap: wrap; gap: 8px 12px; font-size: 13px; }
+  #topbar .brand { font-size: 16px; }
+  .menu { flex-wrap: wrap; }
+  .clan-grid, .tactics, .sides, .agents, .forces { grid-template-columns: 1fr; }
+  .dialog { padding: 14px; max-height: 92vh; }
+}
