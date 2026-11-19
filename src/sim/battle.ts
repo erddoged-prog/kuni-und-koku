@@ -102,7 +102,7 @@ export function simulateBattle(input: BattleInput): BattleResult {
   // --- Phase 0: Aufmarsch --------------------------------------------------
   const report: ReportPhase[] = [];
   deployLines.unshift(
-    `${input.attacker.clanName} (${input.attacker.generalName}, ${'★'.repeat(input.attacker.stars)}) greifen ${input.defender.clanName} (${input.defender.generalName}, ${'★'.repeat(input.defender.stars)}) an – ${men('attacker')} gegen ${men('defender')} Mann.`,
+    `Die ${input.attacker.clanName} (${input.attacker.generalName}, ${'★'.repeat(input.attacker.stars)}) greifen die ${input.defender.clanName} (${input.defender.generalName}, ${'★'.repeat(input.defender.stars)}) an – ${men('attacker')} gegen ${men('defender')} Mann.`,
     `Gelände: ${terrain.name}. ${terrain.description}`,
   );
   if (castle) deployLines.push(`Die Verteidiger stehen hinter den Mauern: ${castle.name}.`);

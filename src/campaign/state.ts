@@ -90,6 +90,11 @@ export function clanName(clan: ClanId): string {
   return CLANS[clan].name;
 }
 
+/** Name nach Artikel: "der Akagane", "den Unabhängigen". */
+export function clanPlural(clan: ClanId): string {
+  return CLANS[clan].plural ?? CLANS[clan].name;
+}
+
 export function isAlive(state: GameState, clan: ClanId): boolean {
   return provincesOf(state, clan).length > 0 || armiesOf(state, clan).length > 0;
 }

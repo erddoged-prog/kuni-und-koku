@@ -2,7 +2,7 @@
 import { PROVINCES, seasonOf } from '../data';
 import type { Army, ClanId, GameState, ProvinceId, Tactic, Unit } from '../data/types';
 import { deriveSeed, simulateBattle, starsForXp, type Side } from '../sim';
-import { clanName, log, provinceName, type BattleRecord } from './state';
+import { clanName, clanPlural, log, provinceName, type BattleRecord } from './state';
 import { adjustRelation } from './diplomacy';
 
 export interface Combatants {
@@ -34,8 +34,8 @@ export function fight(
     s.clans[attacker.clan]?.isPlayer ? 'attacker' : s.clans[defender.clan]?.isPlayer ? 'defender' : undefined;
 
   const result = simulateBattle({
-    attacker: { clan: attacker.clan, clanName: clanName(attacker.clan), generalName: att.general.name, stars: att.general.stars, units: att.units, tactic: attacker.tactic },
-    defender: { clan: defender.clan, clanName: clanName(defender.clan), generalName: def.general.name, stars: def.general.stars, units: def.units, tactic: defender.tactic },
+    attacker: { clan: attacker.clan, clanName: clanPlural(attacker.clan), generalName: att.general.name, stars: att.general.stars, units: att.units, tactic: attacker.tactic },
+    defender: { clan: defender.clan, clanName: clanPlural(defender.clan), generalName: def.general.name, stars: def.general.stars, units: def.units, tactic: defender.tactic },
     terrain: PROVINCES[pid].terrain,
     season: seasonOf(s.turn).id,
     castleLevel: kind === 'assault' ? prov.buildings.castle ?? 0 : 0,
@@ -70,7 +70,7 @@ export function fight(
   for (const a of [...attacker.armies, ...defender.armies]) if (a.units.length === 0) delete s.armies[a.id];
 
   adjustRelation(s, attacker.clan, defender.clan, -5);
-  const winnerName = clanName(result.winner === 'attacker' ? attacker.clan : defender.clan);
+  const winnerName = clanPlural(result.winner === 'attacker' ? attacker.clan : defender.clan);
   log(s, `${kind === 'assault' ? 'Sturm auf' : 'Schlacht um'} ${provinceName(pid)}: ${clanName(attacker.clan)} gegen ${clanName(defender.clan)} – Sieg der ${winnerName}.`);
   return { turn: s.turn, province: pid, attacker: attacker.clan, defender: defender.clan, kind, result };
 }

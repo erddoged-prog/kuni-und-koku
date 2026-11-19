@@ -77,6 +77,7 @@ const LIST: ClanDef[] = [
   {
     id: 'ronin',
     name: 'Unabhängige',
+    plural: 'Unabhängigen',
     kanji: '浪',
     color: '#a39985',
     accent: '#4a443c',

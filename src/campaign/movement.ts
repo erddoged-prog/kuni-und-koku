@@ -4,7 +4,7 @@ import type { Army, ArmyId, ClanId, GameState, ProvinceId, Tactic } from '../dat
 import { fight } from './combat';
 import { applyWarDeclaration } from './diplomacy';
 import {
-  allied, armiesIn, atWar, castleLevel, clanName, clone, fail, log, ok, provinceName, relation,
+  allied, armiesIn, atWar, castleLevel, clanName, clanPlural, clone, fail, log, ok, provinceName, relation,
   type ActionResult, type BattleRecord,
 } from './state';
 
@@ -143,7 +143,7 @@ export function capture(s: GameState, pid: ProvinceId, clan: ClanId) {
   prov.garrison = [];
   prov.queue = [];
   prov.siege = undefined;
-  log(s, `${clanName(clan)} erobern ${provinceName(pid)} von ${clanName(old)}.`);
+  log(s, `${clanName(clan)} erobern ${provinceName(pid)} von den ${clanPlural(old)}.`);
   // Feindliche Armeen, die noch hier stehen (z. B. Verbündete des Alten), weichen.
   for (const a of armiesIn(s, pid)) if (a.owner !== clan && !allied(s, a.owner, clan)) retreat(s, a, undefined);
 }

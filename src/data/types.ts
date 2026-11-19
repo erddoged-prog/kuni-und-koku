@@ -131,6 +131,8 @@ export interface Adjacency {
 export interface ClanDef {
   id: ClanId;
   name: string;
+  /** Pluralform nach Artikel ("der Unabhängigen"), falls abweichend vom Namen. */
+  plural?: string;
   /** Ein Zeichen für das Clan-Symbol. */
   kanji: string;
   /** Hauptfarbe (Kartenfläche). */
