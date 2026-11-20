@@ -10,6 +10,7 @@ npm run dev      # Spiel im Browser (http://localhost:5173)
 npm test         # Vitest
 npm run build    # statischer Build nach dist/
 npm run balance  # Siegquoten je Einheitenpaarung (siehe scripts/balance.ts)
+npm run kampagne # KI gegen KI: Ø Provinzen und Siege je Clan (siehe scripts/kampagne.ts)
 ```
 
 Balancing-Optionen: `npm run balance -- --n 500 --terrain hills --season winter --units 3 --budget 1500 --md balancing.md`

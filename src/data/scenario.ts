@@ -46,24 +46,24 @@ export const CLAN_BONUS_BUILDINGS: Record<ClanId, Record<BuildingId, number>> = 
   kurogane: { sword_dojo: 1 },
   murasaki: { bow_dojo: 1 },
   akagane: { farm: 2 },
-  matsukaze: { stables: 1 },
+  matsukaze: { stables: 1, farm: 2 },
   kitakaze: { bow_dojo: 1 },
   aoyama: { castle: 3 },
 };
 
 export const START_ARMIES: StartArmy[] = [
-  { clan: 'kurogane', location: 'satsuma', general: 'Kurogane Yoshihisa', stars: 3, isDaimyo: true, units: ['katana', 'samurai_yari', 'ashigaru_yari', 'ashigaru_yari', 'yumi'] },
-  { clan: 'murasaki', location: 'aki', general: 'Murasaki Motonari', stars: 3, isDaimyo: true, units: ['samurai_yari', 'ashigaru_yari', 'ashigaru_yari', 'ashigaru_yari', 'yumi'] },
+  { clan: 'kurogane', location: 'satsuma', general: 'Kurogane Yoshihisa', stars: 3, isDaimyo: true, units: ['samurai_yari', 'samurai_yari', 'ashigaru_yari', 'ashigaru_yari', 'yumi'] },
+  { clan: 'murasaki', location: 'aki', general: 'Murasaki Motonari', stars: 3, isDaimyo: true, units: ['samurai_yari', 'ashigaru_yari', 'ashigaru_yari', 'yumi', 'yumi'] },
   { clan: 'akagane', location: 'owari', general: 'Akagane Nobuhide', stars: 3, isDaimyo: true, units: ['samurai_yari', 'ashigaru_yari', 'ashigaru_yari', 'ashigaru_yari', 'yumi'] },
-  { clan: 'matsukaze', location: 'kai', general: 'Matsukaze Harunobu', stars: 3, isDaimyo: true, units: ['kiba', 'kiba', 'samurai_yari', 'ashigaru_yari', 'ashigaru_yari'] },
+  { clan: 'matsukaze', location: 'kai', general: 'Matsukaze Harunobu', stars: 3, isDaimyo: true, units: ['kiba', 'kiba', 'samurai_yari', 'samurai_yari', 'ashigaru_yari', 'ashigaru_yari'] },
   { clan: 'kitakaze', location: 'echigo', general: 'Kitakaze Kagenori', stars: 4, isDaimyo: true, units: ['samurai_yari', 'ashigaru_yari', 'ashigaru_yari', 'yumi', 'kiba'] },
   { clan: 'aoyama', location: 'sagami', general: 'Aoyama Ujiyasu', stars: 3, isDaimyo: true, units: ['samurai_yari', 'samurai_yari', 'ashigaru_yari', 'ashigaru_yari', 'yumi'] },
 ];
 
 /** Startbeziehungen (Default: Frieden mit Wert 0; Unabhängige: immer Krieg). */
 export const START_RELATIONS: { a: ClanId; b: ClanId; state: 'war' | 'peace' | 'alliance'; value: number }[] = [
-  { a: 'matsukaze', b: 'kitakaze', state: 'war', value: -50 },
-  { a: 'akagane', b: 'matsukaze', state: 'peace', value: -20 },
+  { a: 'matsukaze', b: 'kitakaze', state: 'peace', value: -40 },
+  { a: 'akagane', b: 'matsukaze', state: 'peace', value: 10 },
   { a: 'aoyama', b: 'matsukaze', state: 'alliance', value: 50 },
-  { a: 'kurogane', b: 'murasaki', state: 'peace', value: -30 },
+  { a: 'kurogane', b: 'murasaki', state: 'war', value: -50 },
 ];

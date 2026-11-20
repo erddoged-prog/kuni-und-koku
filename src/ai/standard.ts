@@ -81,6 +81,8 @@ interface Situation {
   own: ProvinceId[];
   /** Feindliche (bzw. potenziell feindliche) Kraft in Nachbarprovinzen. */
   threat: Record<ProvinceId, number>;
+  /** Nur Clans im Krieg: akute Gefahr (für Verteidigung und Panik; Nachbarn im Frieden zählen hier nicht). */
+  warThreat: Record<ProvinceId, number>;
   /** Eigene Verteidigungskraft vor Ort (Armeen + Garnison). */
   defense: Record<ProvinceId, number>;
   border: Set<ProvinceId>;
@@ -154,6 +156,7 @@ class Turn {
   private situate(): Situation {
     const own = provincesOf(this.s, this.clan);
     const threat: Record<ProvinceId, number> = {};
+    const warThreat: Record<ProvinceId, number> = {};
     const defense: Record<ProvinceId, number> = {};
     const border = new Set<ProvinceId>();
     const enemyRoles: Record<UnitRole, number> = { spear: 0, cavalry: 0, ranged: 0, sword: 0 };
@@ -162,6 +165,7 @@ class Turn {
       const p = this.s.provinces[pid];
       defense[pid] = armyPower(p.garrison) + armiesIn(this.s, pid, this.clan).reduce((a, x) => a + armyPower(x.units, x.general.stars), 0);
       threat[pid] = 0;
+      warThreat[pid] = 0;
       for (const n of neighborsOf(pid)) {
         const np = this.s.provinces[n.id];
         if (this.hostility(np.owner) > 0) border.add(pid);
@@ -169,6 +173,7 @@ class Turn {
           const h = this.hostility(a.owner);
           if (!h) continue;
           threat[pid] += h * armyPower(a.units, a.general.stars);
+          if (h === 1) warThreat[pid] += armyPower(a.units, a.general.stars);
           if (!seenArmies.has(a.id)) {
             seenArmies.add(a.id);
             for (const u of a.units) enemyRoles[UNIT_TYPES[u.type].role] += u.men * h;
@@ -177,14 +182,16 @@ class Turn {
       }
       // Feindliche Armeen in der eigenen Provinz (Belagerer) zählen voll.
       for (const a of armiesIn(this.s, pid)) {
-        if (this.hostility(a.owner) === 1) threat[pid] += armyPower(a.units, a.general.stars);
+        if (this.hostility(a.owner) !== 1) continue;
+        threat[pid] += armyPower(a.units, a.general.stars);
+        warThreat[pid] += armyPower(a.units, a.general.stars);
       }
     }
-    return { own, threat, defense, border, enemyRoles };
+    return { own, threat, warThreat, defense, border, enemyRoles };
   }
 
   private inDanger(sit: Situation): boolean {
-    return sit.own.some((pid) => sit.threat[pid] > sit.defense[pid] * 1.2 && sit.threat[pid] > REF_UNIT_POWER * 2);
+    return sit.own.some((pid) => sit.warThreat[pid] > sit.defense[pid] * 1.2 && sit.warThreat[pid] > REF_UNIT_POWER * 2);
   }
 
   /** Wert einer Provinz für Eroberung: Ertrag, Ausbau, Hauptstadt. */
@@ -316,15 +323,15 @@ class Turn {
   // -------------------------------------------------------------------------
   private defend(sit: Situation) {
     const endangered = sit.own
-      .filter((pid) => sit.threat[pid] > sit.defense[pid] && sit.threat[pid] > REF_UNIT_POWER * 2)
+      .filter((pid) => sit.warThreat[pid] > sit.defense[pid] && sit.warThreat[pid] > REF_UNIT_POWER * 2)
       .sort((a, b) => this.provinceValue(b) - this.provinceValue(a));
     for (const pid of endangered) {
       // Schon eine Armee vor Ort? Dann bleibt sie.
       for (const a of armiesIn(this.s, pid, this.clan)) this.busy.add(a.id);
-      if (sit.defense[pid] >= sit.threat[pid]) continue;
+      if (sit.defense[pid] >= sit.warThreat[pid]) continue;
       const helper = this.freeArmies()
         .filter((a) => a.location !== pid && canMove(this.s, a.id, pid).ok && !canMove(this.s, a.id, pid).hostile)
-        .filter((a) => sit.threat[a.location] <= (sit.defense[a.location] - armyPower(a.units, a.general.stars)) || !sit.own.includes(a.location))
+        .filter((a) => sit.warThreat[a.location] <= (sit.defense[a.location] - armyPower(a.units, a.general.stars)) || !sit.own.includes(a.location))
         .sort((a, b) => armyPower(b.units, b.general.stars) - armyPower(a.units, a.general.stars))[0];
       if (helper && this.apply(moveArmy(this.s, helper.id, pid))) {
         this.busy.add(helper.id);
@@ -365,7 +372,7 @@ class Turn {
         // Bleibt die Heimat ausreichend geschützt, wenn die Armee abzieht?
         const home = army.location;
         const leftBehind = (sit.defense[home] ?? 0) - power;
-        const homeSafe = !sit.own.includes(home) || sit.threat[home] <= Math.max(0, leftBehind) * 1.1 || this.s.provinces[home].garrison.length >= 2 && sit.threat[home] < REF_UNIT_POWER * 2;
+        const homeSafe = !sit.own.includes(home) || sit.warThreat[home] <= Math.max(0, leftBehind) * 1.1 || this.s.provinces[home].garrison.length >= 2 && sit.warThreat[home] < REF_UNIT_POWER * 2;
         for (const n of neighborsOf(home)) {
           const target = this.s.provinces[n.id];
           if (target.owner === this.clan || !this.mayAttack(target.owner)) continue;
