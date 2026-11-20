@@ -53,7 +53,7 @@ export const CLAN_BONUS_BUILDINGS: Record<ClanId, Record<BuildingId, number>> = 
 
 export const START_ARMIES: StartArmy[] = [
   { clan: 'kurogane', location: 'satsuma', general: 'Kurogane Yoshihisa', stars: 3, isDaimyo: true, units: ['katana', 'samurai_yari', 'ashigaru_yari', 'ashigaru_yari', 'yumi'] },
-  { clan: 'murasaki', location: 'aki', general: 'Murasaki Motonari', stars: 3, isDaimyo: true, units: ['samurai_yari', 'ashigaru_yari', 'ashigaru_yari', 'yumi', 'yumi'] },
+  { clan: 'murasaki', location: 'aki', general: 'Murasaki Motonari', stars: 3, isDaimyo: true, units: ['samurai_yari', 'ashigaru_yari', 'ashigaru_yari', 'ashigaru_yari', 'yumi'] },
   { clan: 'akagane', location: 'owari', general: 'Akagane Nobuhide', stars: 3, isDaimyo: true, units: ['samurai_yari', 'ashigaru_yari', 'ashigaru_yari', 'ashigaru_yari', 'yumi'] },
   { clan: 'matsukaze', location: 'kai', general: 'Matsukaze Harunobu', stars: 3, isDaimyo: true, units: ['kiba', 'kiba', 'samurai_yari', 'ashigaru_yari', 'ashigaru_yari'] },
   { clan: 'kitakaze', location: 'echigo', general: 'Kitakaze Kagenori', stars: 4, isDaimyo: true, units: ['samurai_yari', 'ashigaru_yari', 'ashigaru_yari', 'yumi', 'kiba'] },
