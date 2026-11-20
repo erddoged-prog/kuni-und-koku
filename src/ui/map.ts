@@ -1,9 +1,12 @@
-// SVG-Karte im Washi-Stil. Reine String-Erzeugung aus Spielzustand + UI-Zustand.
-import { CAPITAL_ID, CLANS, PROVINCES, PROVINCE_IDS } from '../data';
+// SVG-Karte im Tuschestil (Sumi-e) auf Washi-Papier. Reine String-Erzeugung aus Spielzustand + UI-Zustand.
+import { CAPITAL_ID, CLANS, PROVINCES, PROVINCE_IDS, seasonOf } from '../data';
 import type { Army, GameState, ProvinceId } from '../data/types';
 import { armyMen } from '../campaign';
 import { MAP_H, MAP_W, toPath, type MapGeometry, type Pt } from './geometry';
 import { monGroup } from './mon';
+import { bordersLayer, clanWash, inkDefs, seaLayer, seaRoutes, terrainLayer } from './ink';
+
+let terrainCache: { geo: MapGeometry; svg: string } | undefined;
 
 export interface MapView {
   selectedProvince?: ProvinceId;
@@ -37,10 +40,7 @@ function defs(geo: MapGeometry): string {
       <feComponentTransfer><feFuncA type="linear" slope="0.45"/></feComponentTransfer>
       <feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge>
     </filter>
-    <pattern id="waves" width="48" height="24" patternUnits="userSpaceOnUse">
-      <path d="M0,24 a12,12 0 0 1 24,0 a12,12 0 0 1 24,0 M6,24 a6,6 0 0 1 12,0 M30,24 a6,6 0 0 1 12,0
-               M-12,12 a12,12 0 0 1 24,0 a12,12 0 0 1 24,0 a12,12 0 0 1 24,0" fill="none" stroke="#7f97a6" stroke-width="1" opacity=".35"/>
-    </pattern>
+    ${inkDefs()}
     <pattern id="siege" width="10" height="10" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
       <rect width="4" height="10" fill="${INK}" opacity=".35"/>
     </pattern>
@@ -78,34 +78,34 @@ export function renderMap(state: GameState, geo: MapGeometry, view: MapView): st
   const parts: string[] = [];
   parts.push(`<svg id="map" viewBox="0 0 ${MAP_W} ${MAP_H}" preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg">`);
   parts.push(defs(geo));
-  // Meer
-  parts.push(`<rect width="${MAP_W}" height="${MAP_H}" fill="#cdd6d3"/><rect width="${MAP_W}" height="${MAP_H}" fill="url(#waves)"/>`);
+  // Meer mit Küstenringen, darüber die Seewege (das Land verdeckt ihre Enden)
+  parts.push(seaLayer(geo));
+  parts.push(seaRoutes(geo, seasonOf(state.turn).seaOpen));
   // Inseln mit Schatten
   parts.push(`<g filter="url(#shadow)">${Object.values(geo.islands).map((p) => `<path d="${toPath(p)}" fill="${PAPER}"/>`).join('')}</g>`);
-  // Provinzen
+  // Clan-Lasur, Papierstruktur, Geländezeichen
+  parts.push(clanWash(state, geo));
+  parts.push(`<g clip-path="url(#land)" pointer-events="none">
+    <rect width="${MAP_W}" height="${MAP_H}" filter="url(#mottle)" opacity=".4"/>
+    <rect width="${MAP_W}" height="${MAP_H}" filter="url(#washi)" opacity=".45"/></g>`);
+  if (terrainCache?.geo !== geo) terrainCache = { geo, svg: terrainLayer(geo) };
+  parts.push(terrainCache.svg);
+  // Klickflächen der Provinzen (unsichtbar, Hover hellt auf)
   parts.push('<g class="provinces">');
   for (const id of PROVINCE_IDS) {
-    const p = state.provinces[id];
-    const clan = CLANS[p.owner];
     const cls = ['prov'];
     if (view.selectedProvince === id) cls.push('selected');
     const t = targets.get(id);
     if (t) cls.push(t.hostile ? 'target-hostile' : 'target');
-    parts.push(`<path class="${cls.join(' ')}" data-pid="${id}" d="${toPath(geo.cells[id])}" fill="${clan.color}"/>`);
+    parts.push(`<path class="${cls.join(' ')}" data-pid="${id}" d="${toPath(geo.cells[id])}"/>`);
   }
   parts.push('</g>');
-  // Papierstruktur über dem Land
-  parts.push(`<g clip-path="url(#land)" pointer-events="none">
-    <rect width="${MAP_W}" height="${MAP_H}" filter="url(#mottle)" opacity=".55"/>
-    <rect width="${MAP_W}" height="${MAP_H}" filter="url(#washi)" opacity=".5"/></g>`);
   // Belagerungen
   for (const id of PROVINCE_IDS) {
     if (state.provinces[id].siege) parts.push(`<path d="${toPath(geo.cells[id])}" fill="url(#siege)" pointer-events="none"/>`);
   }
   // Grenzen + Küsten
-  parts.push(`<g pointer-events="none" fill="none" stroke="${INK}" stroke-linejoin="round">
-    ${PROVINCE_IDS.map((id) => `<path d="${toPath(geo.cells[id])}" stroke-width="1" opacity=".55"/>`).join('')}
-    ${Object.values(geo.islands).map((p) => `<path d="${toPath(p)}" stroke-width="2.4"/>`).join('')}</g>`);
+  parts.push(bordersLayer(state, geo));
   // Zielmarkierungen & Auswahl obenauf
   parts.push('<g pointer-events="none">');
   for (const t of view.targets) {

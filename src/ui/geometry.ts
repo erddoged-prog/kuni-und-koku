@@ -89,12 +89,38 @@ export interface MapGeometry {
   centers: Record<ProvinceId, Pt>;
 }
 
+/**
+ * Verformt eine Küstenlinie entlang der Normalen mit festem, glattem Rauschen
+ * (Summe von Sinuswellen über die Bogenlänge) – zerklüftet, aber bei jedem Spiel gleich.
+ */
+export function roughen(poly: Pt[], seed: number, amp = 5): Pt[] {
+  const n = poly.length;
+  // Umlaufsinn bestimmen, damit "außen" immer außen ist
+  let area = 0;
+  for (let i = 0; i < n; i++) area += poly[i][0] * poly[(i + 1) % n][1] - poly[(i + 1) % n][0] * poly[i][1];
+  const sign = area > 0 ? 1 : -1;
+  let s = 0;
+  return poly.map((p, i) => {
+    const prev = poly[(i + n - 1) % n];
+    const next = poly[(i + 1) % n];
+    s += Math.hypot(p[0] - prev[0], p[1] - prev[1]);
+    const tx = next[0] - prev[0];
+    const ty = next[1] - prev[1];
+    const tl = Math.hypot(tx, ty) || 1;
+    const nx = (ty / tl) * sign;
+    const ny = (-tx / tl) * sign;
+    const d =
+      amp * (0.55 * Math.sin(s * 0.021 + seed) + 0.3 * Math.sin(s * 0.057 + seed * 2.3) + 0.15 * Math.sin(s * 0.13 + seed * 4.1));
+    return [p[0] + nx * d, p[1] + ny * d] as Pt;
+  });
+}
+
 /** Berechnet alle Polygone in SVG-Koordinaten. */
 export function buildGeometry(): MapGeometry {
   const islands: Record<string, Pt[]> = {};
-  for (const [k, outline] of Object.entries(ISLAND_OUTLINES)) {
-    islands[k] = chaikin(outline, 3).map(([x, y]) => [x * SCALE + 20, y * SCALE + 20] as Pt);
-  }
+  Object.entries(ISLAND_OUTLINES).forEach(([k, outline], i) => {
+    islands[k] = roughen(chaikin(outline, 3).map(([x, y]) => [x * SCALE + 20, y * SCALE + 20] as Pt), 1.7 + i * 3.1);
+  });
   const site = (id: ProvinceId): Pt => [PROVINCES[id].x * SCALE + 20, PROVINCES[id].y * SCALE + 20];
   const cells: Record<ProvinceId, Pt[]> = {};
   const centers: Record<ProvinceId, Pt> = {};
@@ -115,6 +141,11 @@ export function buildGeometry(): MapGeometry {
 
 /** Länge der gemeinsamen Grenze zweier Polygone (Kanten von a, die auf dem Rand von b liegen). */
 export function borderLength(a: Pt[], b: Pt[], eps = 0.6): number {
+  return sharedEdges(a, b, eps).reduce((len, [p, q]) => len + Math.hypot(q[0] - p[0], q[1] - p[1]), 0);
+}
+
+/** Kanten von a, die auf dem Rand von b liegen (gemeinsame Grenze). */
+export function sharedEdges(a: Pt[], b: Pt[], eps = 0.6): [Pt, Pt][] {
   const onSeg = (p: Pt, q: Pt, r: Pt) => {
     const dx = r[0] - q[0];
     const dy = r[1] - q[1];
@@ -122,7 +153,7 @@ export function borderLength(a: Pt[], b: Pt[], eps = 0.6): number {
     const t = l2 ? Math.max(0, Math.min(1, ((p[0] - q[0]) * dx + (p[1] - q[1]) * dy) / l2)) : 0;
     return Math.hypot(p[0] - q[0] - t * dx, p[1] - q[1] - t * dy) < eps;
   };
-  let len = 0;
+  const edges: [Pt, Pt][] = [];
   for (let i = 0; i < a.length; i++) {
     const p = a[i];
     const q = a[(i + 1) % a.length];
@@ -130,12 +161,12 @@ export function borderLength(a: Pt[], b: Pt[], eps = 0.6): number {
       const r = b[j];
       const t = b[(j + 1) % b.length];
       if (onSeg(p, r, t) && onSeg(q, r, t)) {
-        len += Math.hypot(q[0] - p[0], q[1] - p[1]);
+        edges.push([p, q]);
         break;
       }
     }
   }
-  return len;
+  return edges;
 }
 
 /** Punkt-in-Polygon (Ray Casting). */
