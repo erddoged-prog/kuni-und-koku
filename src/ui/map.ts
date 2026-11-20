@@ -4,7 +4,8 @@ import type { Army, GameState, ProvinceId } from '../data/types';
 import { armyMen } from '../campaign';
 import { MAP_H, MAP_W, toPath, type MapGeometry, type Pt } from './geometry';
 import { monGroup } from './mon';
-import { bordersLayer, clanWash, inkDefs, seaLayer, seaRoutes, terrainLayer } from './ink';
+import { bordersLayer, castleArt, clanBands, clanWash, goldClouds, goldDefs, inkDefs, seaLayer, seaRoutes, terrainLayer } from './ink';
+import { paintedLand } from './painted';
 
 let terrainCache: { geo: MapGeometry; svg: string } | undefined;
 
@@ -40,23 +41,12 @@ function defs(geo: MapGeometry): string {
       <feComponentTransfer><feFuncA type="linear" slope="0.45"/></feComponentTransfer>
       <feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge>
     </filter>
-    ${inkDefs()}
+    ${inkDefs()}${goldDefs()}
     <pattern id="siege" width="10" height="10" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
       <rect width="4" height="10" fill="${INK}" opacity=".35"/>
     </pattern>
     <clipPath id="land">${islandClip}</clipPath>
   </defs>`;
-}
-
-function castleIcon(level: number): string {
-  // Kleine Burg: Steinsockel + 1–3 Dachstufen
-  const roofs = [
-    '<path d="M-11,-2 L11,-2 L8,-7 L-8,-7Z"/>',
-    '<path d="M-8,-9 L8,-9 L6,-13 L-6,-13Z"/>',
-    '<path d="M-5,-15 L5,-15 L3,-19 L-3,-19Z"/>',
-  ].slice(0, level).join('');
-  return `<g class="castle" fill="${INK}" stroke="${PAPER}" stroke-width=".8">
-    <path d="M-10,8 L10,8 L8,-1 L-8,-1Z" fill="#6b5a46"/>${roofs}</g>`;
 }
 
 function banner(army: Army, selected: boolean): string {
@@ -83,13 +73,16 @@ export function renderMap(state: GameState, geo: MapGeometry, view: MapView): st
   parts.push(seaRoutes(geo, seasonOf(state.turn).seaOpen));
   // Inseln mit Schatten
   parts.push(`<g filter="url(#shadow)">${Object.values(geo.islands).map((p) => `<path d="${toPath(p)}" fill="${PAPER}"/>`).join('')}</g>`);
-  // Clan-Lasur, Papierstruktur, Geländezeichen
-  parts.push(clanWash(state, geo));
-  parts.push(`<g clip-path="url(#land)" pointer-events="none">
-    <rect width="${MAP_W}" height="${MAP_H}" filter="url(#mottle)" opacity=".4"/>
-    <rect width="${MAP_W}" height="${MAP_H}" filter="url(#washi)" opacity=".45"/></g>`);
-  if (terrainCache?.geo !== geo) terrainCache = { geo, svg: terrainLayer(geo) };
-  parts.push(terrainCache.svg);
+  // Gemaltes Land (Canvas-Bild); ohne Browser die gezeichneten Geländezeichen
+  const painted = paintedLand(geo);
+  if (painted) {
+    parts.push(`<image href="${painted}" x="0" y="0" width="${MAP_W}" height="${MAP_H}" pointer-events="none"/>`);
+  } else {
+    if (terrainCache?.geo !== geo) terrainCache = { geo, svg: terrainLayer(geo) };
+    parts.push(terrainCache.svg);
+  }
+  // Clan-Lasur (multipliziert, damit die Malerei durchscheint) und Farbbänder an den Grenzen
+  parts.push(`<g style="mix-blend-mode:multiply">${clanWash(state, geo)}${clanBands(state, geo)}</g>`);
   // Klickflächen der Provinzen (unsichtbar, Hover hellt auf)
   parts.push('<g class="provinces">');
   for (const id of PROVINCE_IDS) {
@@ -132,10 +125,11 @@ export function renderMap(state: GameState, geo: MapGeometry, view: MapView): st
     const size = Math.max(10, Math.min(13, (width * 0.85) / (name.length * 0.6)));
     parts.push(`<text x="${x}" y="${y + 18}" class="pname" style="font-size:${size.toFixed(1)}px">${name}</text>`);
     const lvl = state.provinces[id].buildings.castle ?? 0;
-    if (lvl > 0) parts.push(`<g transform="translate(${x - 17},${y + 3})">${castleIcon(lvl)}</g>`);
+    if (lvl > 0) parts.push(`<g transform="translate(${x - 22},${y + 6})">${castleArt(lvl)}</g>`);
     if (id === CAPITAL_ID) parts.push(`<g transform="translate(${x - 17},${y - 18})"><rect x="-8" y="-8" width="16" height="16" rx="2" fill="#a8261c"/><text y="4.5" class="seal">京</text></g>`);
   }
   parts.push('</g>');
+  parts.push(goldClouds());
   for (const [pid, list] of armiesBy) {
     const [x, y] = geo.centers[pid] as Pt;
     list.forEach((a, i) => {

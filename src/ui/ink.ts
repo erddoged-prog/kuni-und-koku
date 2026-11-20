@@ -261,3 +261,107 @@ export function bordersLayer(state: GameState, geo: MapGeometry): string {
     <path d="${outer.join('')}" stroke-width="2.6" opacity=".8"/>
     <path d="${isl}" stroke-width="2.8"/></g>`;
 }
+
+// ---------------------------------------------------------------------------
+// Goldwolken (Suyari-gasumi) wie auf Stellschirmen
+// ---------------------------------------------------------------------------
+
+/** Goldverlauf und Blattgold-Raster für die Wolken. */
+export function goldDefs(): string {
+  return `
+    <linearGradient id="gold" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#f1d98a"/><stop offset=".5" stop-color="#dcb65a"/><stop offset="1" stop-color="#c39a3f"/>
+    </linearGradient>
+    <filter id="goldleaf" x="0" y="0" width="100%" height="100%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="1" seed="4" result="n"/>
+      <feColorMatrix in="n" type="matrix" values="0 0 0 0 1  0 0 0 0 .95  0 0 0 0 .75  0 0 0 1.6 -1.05" result="f"/>
+      <feComposite in="f" in2="SourceGraphic" operator="in" result="fl"/>
+      <feMerge><feMergeNode in="SourceGraphic"/><feMergeNode in="fl"/></feMerge>
+    </filter>`;
+}
+
+/** Eine Wolke: flacher Boden, oben eine Reihe runder Bäusche, die Enden eingerollt. */
+function cloudBank(x: number, y: number, w: number, h: number, rnd: () => number): string {
+  // Bäusche von rechts nach links
+  const bumps: number[] = [];
+  let rest = w;
+  while (rest > h * 0.9) {
+    const r = h * (0.45 + rnd() * 0.45);
+    bumps.push(Math.min(r, rest / 2));
+    rest -= bumps[bumps.length - 1] * 2;
+  }
+  const yb = y + h;
+  let d = `M${f1(x)},${f1(yb)} L${f1(x + w - rest)},${f1(yb)}`;
+  for (const r of bumps) d += ` a${f1(r)},${f1(r * 0.85)} 0 0 0 ${f1(-2 * r)},0`;
+  d += ' Z';
+  const curl = (px: number, s: number) =>
+    `<path d="M${f1(px)},${f1(yb - 3)} a${f1(5 * s)},${f1(5 * s)} 0 1 1 ${f1(7 * s)},${f1(-4 * s)} a${f1(3 * s)},${f1(3 * s)} 0 1 1 ${f1(-4 * s)},${f1(2 * s)}"/>`;
+  return `<g class="cloud">
+    <path d="${d}" fill="#7a5a22" opacity=".25" transform="translate(2,3)"/>
+    <path d="${d}" fill="url(#gold)" filter="url(#goldleaf)"/>
+    <path d="${d}" fill="none" stroke="#8d6a2a" stroke-width="1.4" stroke-linejoin="round"/>
+    <g fill="none" stroke="#8d6a2a" stroke-width="1.1" stroke-linecap="round">${curl(x + bumps[bumps.length - 1] * 0.6, h / 30)}${curl(x + w - rest - 18, h / 34)}</g></g>`;
+}
+
+/** Wolken über Meer und Kartenrand (ziehen langsam, verdecken keine Provinzmitten). */
+export function goldClouds(): string {
+  const rnd = rngFrom('wolken');
+  const banks: [number, number, number, number][] = [
+    [-20, 60, 340, 34], [110, 108, 200, 26], [690, 90, 150, 28], [-30, 470, 140, 26], [620, 720, 400, 36], [400, 790, 180, 26],
+  ];
+  return `<g class="clouds" pointer-events="none">${banks
+    .map(([x, y, w, h], i) => `<g class="drift" style="animation-delay:${(-i * 3.7).toFixed(1)}s">${cloudBank(x, y, w, h, rnd)}</g>`)
+    .join('')}</g>`;
+}
+
+// ---------------------------------------------------------------------------
+// Clan-Farbbänder entlang der Außengrenzen (wie auf alten Provinzkarten)
+// ---------------------------------------------------------------------------
+
+export function clanBands(state: GameState, geo: MapGeometry): string {
+  if (bordersCache?.geo !== geo) bordersCache = { geo, list: computeBorders(geo) };
+  const clans = new Map<string, ProvinceId[]>();
+  for (const id of PROVINCE_IDS) {
+    const o = state.provinces[id].owner;
+    if (o === NEUTRAL_CLAN) continue;
+    if (!clans.has(o)) clans.set(o, []);
+    clans.get(o)!.push(id);
+  }
+  const isl = Object.values(geo.islands).map((p) => toPath(p)).join('');
+  const clips: string[] = [];
+  const bands: string[] = [];
+  for (const [clan, ids] of clans) {
+    clips.push(`<clipPath id="terr-${clan}">${ids.map((id) => `<path d="${toPath(geo.cells[id])}"/>`).join('')}</clipPath>`);
+    const edges = bordersCache.list.filter((b) => (state.provinces[b.a].owner === clan) !== (state.provinces[b.b].owner === clan)).map((b) => b.d);
+    const c = CLANS[clan].color;
+    bands.push(`<g clip-path="url(#terr-${clan})" fill="none" stroke="${c}" stroke-linejoin="round">
+      <path d="${edges.join('')}${isl}" stroke-width="18" stroke-opacity=".28"/>
+      <path d="${edges.join('')}${isl}" stroke-width="7" stroke-opacity=".45"/></g>`);
+  }
+  return `<defs>${clips.join('')}</defs><g class="bands" pointer-events="none" filter="url(#brush)">${bands.join('')}</g>`;
+}
+
+// ---------------------------------------------------------------------------
+// Burgen
+// ---------------------------------------------------------------------------
+
+/** Gemalte Burg: Steinsockel, weiße Mauern, geschwungene dunkle Dächer; Stockwerke = Stufe. */
+export function castleArt(level: number): string {
+  const roof = (w: number, y: number) =>
+    `<path d="M${-w - 3},${y} Q${-w},${y - 1} ${-w + 2},${y - 4} L${w - 2},${y - 4} Q${w},${y - 1} ${w + 3},${y} Z" fill="#2f2a26"/>`;
+  const floors: string[] = [];
+  let y = -2;
+  let w = 10;
+  for (let i = 0; i < level; i++) {
+    floors.push(`<rect x="${-w + 2}" y="${y - 6}" width="${(w - 2) * 2}" height="6" fill="#f6f0e2" stroke="${INK}" stroke-width=".5"/>`);
+    floors.push(`<path d="M${-w + 4},${y - 3} h${(w - 4) * 2}" stroke="${INK}" stroke-width=".4" opacity=".5"/>`);
+    floors.push(roof(w, y - 6));
+    y -= 10;
+    w -= 2.5;
+  }
+  floors.push(`<path d="M-1.5,${y + 4} l1.5,-3 l1.5,3" fill="#d9b45a"/>`);
+  return `<g class="castle">
+    <ellipse cx="0" cy="7" rx="15" ry="3" fill="${INK}" opacity=".18"/>
+    <path d="M-13,6 L13,6 L10,-2 L-10,-2Z" fill="#8b8273" stroke="${INK}" stroke-width=".6"/>
+    <path d="M-11,3 h22 M-10.5,0.5 h21" stroke="${INK}" stroke-width=".35" opacity=".5"/>${floors.join('')}</g>`;
+}

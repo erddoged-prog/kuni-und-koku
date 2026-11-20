@@ -23,12 +23,32 @@ const ISLAND_OUTLINES: Record<string, Pt[]> = {
   honshu: [
     [13, 53], [15, 56], [20, 55.5], [26, 54.5], [32, 52.5], [38, 52], [44, 51], [47, 54], [48, 57],
     [49, 62], [52, 64.5], [56, 61], [57, 57], [60, 56], [62, 53], [66, 52], [70, 53], [74, 52.5],
-    [78, 52], [80, 51], [82, 50.5], [85, 50], [88, 47], [91, 45], [95, 43], [97, 40], [98, 34],
-    [99, 27], [100, 20], [99, 12], [96, 6], [91, 5], [86, 8], [84, 13], [82, 19], [79, 22], [74, 27],
-    [70, 31], [65, 33], [62, 32], [60, 34], [56, 35], [52, 39], [48, 40], [44, 41], [38, 41],
+    // Izu
+    [76, 52.6], [76.8, 55.5], [77.8, 57.2], [78.8, 55], [79, 52.4],
+    [80, 51], [82, 50.5], [85, 50],
+    // Bōsō
+    [87, 51], [89.5, 53], [91, 51.5], [89.5, 48.5],
+    [91, 45], [95, 43], [97, 40], [98, 34], [99, 27], [100, 20], [99, 12],
+    // Shimokita und Tsugaru
+    [98.5, 7], [99.5, 3], [96.5, 2.5], [95, 5.5], [93, 3.5], [90.5, 4.5],
+    [86, 8], [84, 13],
+    // Oga
+    [82.3, 13.5], [82, 15.5], [83.4, 16.2],
+    [82, 19], [79, 22], [74, 27], [70, 31], [65, 33],
+    // Noto
+    [63, 32.4], [62.6, 28.5], [61.2, 26], [59.4, 26.8], [60.2, 29.5], [60.8, 32.5], [59, 34.2],
+    [56, 35], [52, 39], [48, 40], [44, 41], [38, 41],
     [32, 41], [26, 42], [20, 46], [15, 49], [13, 51],
   ],
+  // Kleine Inseln ohne eigene Provinz (nur Zierde)
+  sado: [[72, 19], [74.5, 17.5], [76, 18.5], [75, 21], [73, 22]],
+  oki: [[25, 36.5], [27, 35.8], [28, 37], [26.5, 38.3]],
+  awaji: [[44.2, 55.2], [45.3, 54.6], [46, 56.2], [45, 58.2], [44, 57.2]],
+  tsushima: [[4.5, 46], [5.5, 45.5], [6, 48], [5, 50], [4.2, 48.5]],
 };
+
+/** Inseln mit Provinzen; die übrigen sind Zierde. */
+export const MAIN_ISLANDS = ['kyushu', 'shikoku', 'honshu'];
 
 export const ISLAND_OF: Record<ProvinceId, string> = Object.fromEntries(
   PROVINCE_IDS.map((id) => [id, ['satsuma', 'higo', 'chikuzen', 'bungo'].includes(id) ? 'kyushu' : ['iyo', 'tosa', 'sanuki'].includes(id) ? 'shikoku' : 'honshu']),
@@ -119,7 +139,8 @@ export function roughen(poly: Pt[], seed: number, amp = 5): Pt[] {
 export function buildGeometry(): MapGeometry {
   const islands: Record<string, Pt[]> = {};
   Object.entries(ISLAND_OUTLINES).forEach(([k, outline], i) => {
-    islands[k] = roughen(chaikin(outline, 3).map(([x, y]) => [x * SCALE + 20, y * SCALE + 20] as Pt), 1.7 + i * 3.1);
+    const amp = MAIN_ISLANDS.includes(k) ? 5 : 1.5;
+    islands[k] = roughen(chaikin(outline, 3).map(([x, y]) => [x * SCALE + 20, y * SCALE + 20] as Pt), 1.7 + i * 3.1, amp);
   });
   const site = (id: ProvinceId): Pt => [PROVINCES[id].x * SCALE + 20, PROVINCES[id].y * SCALE + 20];
   const cells: Record<ProvinceId, Pt[]> = {};

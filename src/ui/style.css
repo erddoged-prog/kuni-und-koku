@@ -68,8 +68,11 @@ button.link { display: block; width: 100%; text-align: left; background: none; b
 .crest { animation: crest 6s ease-in-out infinite alternate; }
 @keyframes crest { from { transform: translate(-3px, 1px); opacity: .7; } to { transform: translate(3px, -1px); opacity: 1; } }
 .searoutes.closed { opacity: .18; }
+.drift { animation: drift 24s ease-in-out infinite alternate; }
+@keyframes drift { from { transform: translateX(-10px); } to { transform: translateX(12px); } }
+.clouds { opacity: .93; }
 .snow { fill: none; }
-@media (prefers-reduced-motion: reduce) { .crest, .ring-target, .ring-hostile { animation: none; } }
+@media (prefers-reduced-motion: reduce) { .crest, .drift, .ring-target, .ring-hostile { animation: none; } }
 .ring-selected { fill: none; stroke: #e2b13c; stroke-width: 4.5; stroke-linejoin: round; }
 .ring-target { fill: rgba(78, 140, 50, .22); stroke: #2f6a1e; stroke-width: 3; stroke-dasharray: 9 5; animation: march 1s linear infinite; }
 .ring-hostile { fill: rgba(168, 38, 28, .2); stroke: var(--vermilion); stroke-width: 3; stroke-dasharray: 9 5; animation: march 1s linear infinite; }
