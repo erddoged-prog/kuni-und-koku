@@ -60,8 +60,9 @@ button.link { display: block; width: 100%; text-align: left; background: none; b
 #topbar button.primary { background: var(--vermilion); border-color: #e9c26a; }
 
 /* ---------- Karte ---------- */
-#mapwrap { position: relative; min-height: 0; overflow: hidden; background: #d7dbd0; }
-#map { width: 100%; height: 100%; display: block; user-select: none; }
+#mapwrap { position: relative; min-height: 0; overflow: hidden; background: #2a1f15; }
+#mapwrap > svg { position: absolute; inset: 0; width: 100%; height: 100%; display: block; user-select: none; }
+#mapbg { pointer-events: none; }
 .prov { cursor: pointer; fill: #fff8e6; fill-opacity: 0; transition: fill-opacity .15s; }
 .prov:hover { fill-opacity: .22; }
 /* Tusche-Ebenen: Wellen wiegen sich, Boote ruhen im Winter */
@@ -72,7 +73,13 @@ button.link { display: block; width: 100%; text-align: left; background: none; b
 @keyframes drift { from { transform: translateX(-10px); } to { transform: translateX(12px); } }
 .clouds { opacity: .93; }
 .snow { fill: none; }
-@media (prefers-reduced-motion: reduce) { .crest, .drift, .ring-target, .ring-hostile { animation: none; } }
+/* Jahreszeiten: Flocken und Blätter fallen schräg */
+.flake { animation: fall linear infinite; }
+@keyframes fall { from { transform: translate(0, -40px); } to { transform: translate(-30px, 120px); opacity: 0; } }
+.petal { animation: flutter linear infinite; transform-box: fill-box; }
+@keyframes flutter { 0% { translate: 0 -30px; rotate: 0deg; opacity: 0; } 15% { opacity: 1; } 100% { translate: -90px 90px; rotate: 300deg; opacity: 0; } }
+text.compass { font-family: var(--kanji); font-size: 15px; text-anchor: middle; fill: var(--ink); }
+@media (prefers-reduced-motion: reduce) { .crest, .drift, .flake, .petal, .ring-target, .ring-hostile { animation: none; } }
 .ring-selected { fill: none; stroke: #e2b13c; stroke-width: 4.5; stroke-linejoin: round; }
 .ring-target { fill: rgba(78, 140, 50, .22); stroke: #2f6a1e; stroke-width: 3; stroke-dasharray: 9 5; animation: march 1s linear infinite; }
 .ring-hostile { fill: rgba(168, 38, 28, .2); stroke: var(--vermilion); stroke-width: 3; stroke-dasharray: 9 5; animation: march 1s linear infinite; }
@@ -83,10 +90,24 @@ text.pname {
   paint-order: stroke; stroke: rgba(239, 227, 200, .85); stroke-width: 3px;
 }
 text.seal { font-family: var(--kanji); font-size: 13px; text-anchor: middle; fill: var(--paper); }
+/* Spielfiguren */
 .army { cursor: pointer; }
-.army:hover path { stroke: #e2b13c; stroke-width: 2; }
-.army-men { font-size: 10px; text-anchor: start; fill: var(--ink); font-weight: bold; paint-order: stroke; stroke: var(--paper); stroke-width: 2.5px; }
-.army-stars { font-size: 8px; text-anchor: middle; fill: #8a5a00; paint-order: stroke; stroke: var(--paper); stroke-width: 2px; }
+.army.mine { cursor: grab; touch-action: none; }
+.army .piece-body { transition: transform .12s; transform-box: fill-box; transform-origin: 50% 100%; }
+.army:hover .piece-body, .army.selected .piece-body { transform: translateY(-3px); }
+.army.spent .piece-body { filter: saturate(.35) brightness(.92); }
+.piece-pos.dragging { cursor: grabbing; }
+.piece-pos.dragging .piece-body { transform: translateY(-12px) scale(1.12); }
+.piece-pos.dragging .piece-shadow { opacity: .2; }
+.army.landed .piece-body { animation: land .45s cubic-bezier(.3, 1.6, .5, 1); }
+@keyframes land { from { transform: translateY(-18px) scale(1.1); } to { transform: none; } }
+.army-men { font-size: 8.5px; text-anchor: middle; fill: var(--ink); font-weight: bold; }
+.army-stars { font-size: 9px; text-anchor: middle; fill: #c99a2e; paint-order: stroke; stroke: #3b2a1a; stroke-width: 2px; }
+.daimyo-seal { font-family: var(--kanji); font-size: 7px; text-anchor: middle; fill: var(--paper); }
+.drop-hint { fill: none; stroke: none; pointer-events: none; }
+.drop-hint.ok { fill: rgba(226, 177, 60, .28); stroke: #e2b13c; stroke-width: 4; }
+.drop-hint.attack { fill: rgba(168, 38, 28, .32); stroke: var(--vermilion); stroke-width: 4; }
+.drop-hint.bad { fill: rgba(40, 30, 20, .14); stroke: #3b2a1a; stroke-width: 2; stroke-dasharray: 5 5; }
 
 /* ---------- Seitenleiste ---------- */
 #side { display: grid; grid-template-rows: 1fr 150px; border-left: 2px solid var(--ink); background: var(--paper); min-height: 0; }

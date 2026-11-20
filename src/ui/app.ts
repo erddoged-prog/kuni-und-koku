@@ -6,8 +6,9 @@ import {
   playerDefeated, proposeAlliance, proposePeace, breakAlliance, queueBuilding, queueUnit, recruitAgent, sendGift,
   serialize, setStance, transferUnits, type ActionResult, type AiHook, type BattleRecord, type UnitHolder,
 } from '../campaign';
-import { buildGeometry } from './geometry';
-import { renderMap } from './map';
+import { PROVINCE_IDS } from '../data';
+import { buildGeometry, pointInPolygon, toPath, type Pt } from './geometry';
+import { renderMapBackground, renderMapForeground } from './map';
 import { renderLog, renderSidebar, renderTopbar } from './panels';
 import { battleReportDialog, diplomacyDialog, endDialog, startDialog, tacticDialog, turnSummaryDialog, type TacticOdds } from './dialogs';
 
@@ -18,14 +19,14 @@ const SLOT = 'kuni-koku-slot1';
 const storage = {
   get(key: string): string | null {
     try {
-      return storage.get(key);
+      return localStorage.getItem(key);
     } catch {
       return null;
     }
   },
   set(key: string, value: string): boolean {
     try {
-      storage.set(key, value);
+      localStorage.setItem(key, value);
       return true;
     } catch {
       return false;
@@ -41,6 +42,12 @@ export class App {
   private pendingAttack?: { army: string; to: ProvinceId; kind: 'move' | 'assault' };
   private lastTurnBattles: BattleRecord[] = [];
   private endShown = false;
+  /** Laufendes Ziehen einer Spielfigur. */
+  private drag?: { army: string; pointerId: number; startScreen: Pt; startSvg: Pt; base: Pt; moved: boolean; over?: ProvinceId };
+  /** Nach dem Ablegen einer Figur den folgenden Klick verschlucken. */
+  private suppressClickUntil = 0;
+  /** Armee, die zuletzt gezogen hat (Lande-Animation). */
+  private landed?: string;
 
   constructor(private root: HTMLElement, private ai?: AiHook) {
     root.innerHTML = `<header id="topbar"></header><main><div id="mapwrap"></div><aside id="side"><div id="panel"></div><div id="log"></div></aside></main>
@@ -52,6 +59,10 @@ export class App {
         this.clearSelection();
       }
     });
+    root.addEventListener('pointerdown', (e) => this.onPointerDown(e));
+    root.addEventListener('pointermove', (e) => this.onPointerMove(e));
+    root.addEventListener('pointerup', (e) => this.onPointerUp(e));
+    root.addEventListener('pointercancel', () => this.cancelDrag());
     root.addEventListener('change', (e) => this.onChange(e));
     document.addEventListener('keydown', (e) => this.onKey(e));
     this.$('#file').addEventListener('change', (e) => this.onImportFile(e));
@@ -74,7 +85,13 @@ export class App {
     if (!g) return;
     const targets = this.sel.army && g.armies[this.sel.army] && !g.armies[this.sel.army].moved ? legalMoves(g, this.sel.army) : [];
     this.$('#topbar').innerHTML = renderTopbar(g);
-    this.$('#mapwrap').innerHTML = renderMap(g, this.geo, { selectedProvince: this.sel.province, selectedArmy: this.sel.army, targets });
+    const wrap = this.$('#mapwrap');
+    if (!wrap.querySelector('#mapbg')) wrap.innerHTML = renderMapBackground(this.geo);
+    const fg = renderMapForeground(g, this.geo, { selectedProvince: this.sel.province, selectedArmy: this.sel.army, targets, landed: this.landed });
+    this.landed = undefined;
+    const old = wrap.querySelector('#map');
+    if (old) old.outerHTML = fg;
+    else wrap.insertAdjacentHTML('beforeend', fg);
     const panel = this.$('#panel');
     const sameProvince = panel.dataset.pid === (this.sel.province ?? '');
     const panelScroll = panel.scrollTop;
@@ -203,6 +220,7 @@ export class App {
     this.closeModal();
     const res = p.kind === 'move' ? moveArmy(this.game, p.army, p.to, tactic) : assault(this.game, p.army, tactic);
     this.sel = { province: res.ok && res.state.armies[p.army] ? res.state.armies[p.army].location : p.to };
+    if (res.ok && res.state.armies[p.army]) this.landed = p.army;
     this.apply(res);
   }
 
@@ -230,7 +248,10 @@ export class App {
         else {
           const army = this.sel.army;
           const ok = this.apply(moveArmy(g, army, pid), { silent: true });
-          if (ok) this.sel = { province: pid };
+          if (ok) {
+            this.sel = { province: pid };
+            this.landed = army;
+          }
           this.render();
         }
         return;
@@ -250,8 +271,101 @@ export class App {
     return [...this.checked].filter((k) => k.startsWith(prefix)).map((k) => Number(k.slice(prefix.length)));
   }
 
+  // ---------------------------------------------------------------------------
+  // Spielfiguren ziehen (Maus und Finger)
+  // ---------------------------------------------------------------------------
+  private svgPoint(e: PointerEvent): Pt | undefined {
+    const svg = this.root.querySelector('#map') as SVGSVGElement | null;
+    const m = svg?.getScreenCTM();
+    if (!svg || !m) return undefined;
+    const p = new DOMPoint(e.clientX, e.clientY).matrixTransform(m.inverse());
+    return [p.x, p.y];
+  }
+
+  private provinceAt(p: Pt): ProvinceId | undefined {
+    return PROVINCE_IDS.find((id) => pointInPolygon(p, this.geo.cells[id]));
+  }
+
+  private onPointerDown(e: PointerEvent) {
+    const g = this.game;
+    if (!g || e.button > 0 || !this.$('#modal').hidden) return;
+    const el = (e.target as Element).closest('#map [data-army]') as HTMLElement | null;
+    const a = el && g.armies[el.dataset.army!];
+    if (!a || a.owner !== g.playerClan || a.moved) return;
+    // Figur wählen, damit die Zugziele aufleuchten
+    if (this.sel.army !== a.id) {
+      this.checked.clear();
+      this.sel = { province: a.location, army: a.id };
+      this.render();
+    }
+    const pos = this.root.querySelector(`#map [data-army="${a.id}"]`)?.parentElement as HTMLElement | null;
+    const start = this.svgPoint(e);
+    if (!pos || !start) return;
+    this.drag = {
+      army: a.id, pointerId: e.pointerId, startScreen: [e.clientX, e.clientY], startSvg: start,
+      base: [Number(pos.dataset.x), Number(pos.dataset.y)], moved: false,
+    };
+    try {
+      this.root.setPointerCapture(e.pointerId);
+    } catch {
+      /* ältere Browser */
+    }
+    e.preventDefault();
+  }
+
+  private onPointerMove(e: PointerEvent) {
+    const d = this.drag;
+    if (!d || e.pointerId !== d.pointerId) return;
+    if (!d.moved && Math.hypot(e.clientX - d.startScreen[0], e.clientY - d.startScreen[1]) < 6) return;
+    const p = this.svgPoint(e);
+    const pos = this.root.querySelector(`#map [data-army="${d.army}"]`)?.parentElement;
+    if (!p || !pos) return;
+    if (!d.moved) {
+      d.moved = true;
+      pos.classList.add('dragging');
+      pos.parentElement?.appendChild(pos); // nach vorn
+    }
+    pos.setAttribute('transform', `translate(${(d.base[0] + p[0] - d.startSvg[0]).toFixed(1)},${(d.base[1] + p[1] - d.startSvg[1]).toFixed(1)})`);
+    const over = this.provinceAt(p);
+    if (over === d.over) return;
+    d.over = over;
+    const hint = this.root.querySelector('#drophint');
+    if (!hint) return;
+    const g = this.game!;
+    const t = over && over !== g.armies[d.army]?.location ? legalMoves(g, d.army).find((m) => m.to === over) : undefined;
+    hint.setAttribute('d', over && over !== g.armies[d.army]?.location ? toPath(this.geo.cells[over]) : '');
+    hint.setAttribute('class', `drop-hint${t ? (t.hostile ? ' attack' : ' ok') : ' bad'}`);
+  }
+
+  private onPointerUp(e: PointerEvent) {
+    const d = this.drag;
+    if (!d || e.pointerId !== d.pointerId) return;
+    this.drag = undefined;
+    if (!d.moved) return; // einfacher Klick: übernimmt der Klick-Handler
+    this.suppressClickUntil = performance.now() + 400;
+    const g = this.game!;
+    const t = d.over ? legalMoves(g, d.army).find((m) => m.to === d.over) : undefined;
+    if (!t) return this.render(); // zurück an den Platz
+    if (t.hostile) {
+      this.render();
+      return this.openAttack('move', d.army, t.to);
+    }
+    if (this.apply(moveArmy(g, d.army, t.to), { silent: true })) {
+      this.sel = { province: t.to };
+      this.landed = d.army;
+    }
+    this.render();
+  }
+
+  private cancelDrag() {
+    if (!this.drag) return;
+    this.drag = undefined;
+    this.render();
+  }
+
   private onClick(e: MouseEvent) {
     const target = e.target as Element;
+    if (performance.now() < this.suppressClickUntil && target.closest('#mapwrap')) return;
     if (target.closest('#modal') && target.id === 'modal') return this.closeModal();
     const el = target.closest('[data-action]') as HTMLElement | null;
     if (!el) {

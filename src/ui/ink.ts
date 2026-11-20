@@ -365,3 +365,105 @@ export function castleArt(level: number): string {
     <path d="M-13,6 L13,6 L10,-2 L-10,-2Z" fill="#8b8273" stroke="${INK}" stroke-width=".6"/>
     <path d="M-11,3 h22 M-10.5,0.5 h21" stroke="${INK}" stroke-width=".35" opacity=".5"/>${floors.join('')}</g>`;
 }
+
+// ---------------------------------------------------------------------------
+// Jahreszeiten: Schnee, Kirschblüten, Herbstlaub (fest verteilt, sanft animiert)
+// ---------------------------------------------------------------------------
+
+const seasonCache = new Map<string, string>();
+
+/** Freie Punkte auf dem Land (auf allen Hauptinseln), fest geseedet. */
+function landPoints(geo: MapGeometry, key: string, n: number): Pt[] {
+  const rnd = rngFrom(key);
+  const polys = Object.values(geo.islands);
+  const out: Pt[] = [];
+  for (let t = 0; t < n * 30 && out.length < n; t++) {
+    const p: Pt = [rnd() * MAP_W, rnd() * MAP_H];
+    if (polys.some((poly) => pointInPolygon(p, poly))) out.push(p);
+  }
+  return out;
+}
+
+export function seasonLayer(season: string, geo: MapGeometry): string {
+  const key = season;
+  const hit = seasonCache.get(key);
+  if (hit) return hit;
+  const rnd = rngFrom(`jahreszeit-${season}`);
+  const out: string[] = [`<g class="season" pointer-events="none">`];
+  if (season === 'winter') {
+    // Kalter Schleier, im Norden dichter
+    out.push(`<linearGradient id="frost" x1="1" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffffff" stop-opacity=".55"/><stop offset=".6" stop-color="#f4f7fa" stop-opacity=".22"/><stop offset="1" stop-color="#f4f7fa" stop-opacity=".1"/></linearGradient>`);
+    out.push(`<rect width="${MAP_W}" height="${MAP_H}" fill="url(#frost)" clip-path="url(#land)"/>`);
+    // Schneeflecken auf dem Land
+    for (const [x, y] of landPoints(geo, 'schnee', 70)) {
+      out.push(`<ellipse cx="${f1(x)}" cy="${f1(y)}" rx="${f1(6 + rnd() * 10)}" ry="${f1(2 + rnd() * 3)}" fill="#fff" opacity="${(0.5 + rnd() * 0.4).toFixed(2)}"/>`);
+    }
+    // Fallende Flocken
+    out.push('<g class="flakes" fill="#fff">');
+    for (let i = 0; i < 90; i++) {
+      out.push(`<circle class="flake" cx="${f1(rnd() * MAP_W)}" cy="${f1(rnd() * MAP_H)}" r="${f1(1 + rnd() * 1.8)}" opacity="${(0.6 + rnd() * 0.4).toFixed(2)}" style="animation-delay:${(-rnd() * 12).toFixed(1)}s;animation-duration:${(8 + rnd() * 8).toFixed(1)}s"/>`);
+    }
+    out.push('</g>');
+  } else if (season === 'spring') {
+    // Blühende Kirschbäume als rosa Tupfen-Wolken, dazu fliegende Blütenblätter
+    for (const [x, y] of landPoints(geo, 'sakura', 46)) {
+      out.push(`<g transform="translate(${f1(x)},${f1(y)})"><path d="M0,6 V-2" stroke="#3a2a1e" stroke-width="1"/>`);
+      for (let k = 0; k < 7; k++) {
+        out.push(`<circle cx="${f1((rnd() - 0.5) * 12)}" cy="${f1(-4 + (rnd() - 0.5) * 7)}" r="${f1(2 + rnd() * 2.2)}" fill="${rnd() < 0.5 ? '#f2b8c6' : '#f7d3dc'}" opacity=".85"/>`);
+      }
+      out.push('</g>');
+    }
+    out.push('<g class="petals">');
+    for (let i = 0; i < 40; i++) {
+      out.push(`<ellipse class="petal" cx="${f1(rnd() * MAP_W)}" cy="${f1(rnd() * MAP_H)}" rx="2.4" ry="1.3" fill="#f0a9bb" style="animation-delay:${(-rnd() * 14).toFixed(1)}s;animation-duration:${(10 + rnd() * 8).toFixed(1)}s"/>`);
+    }
+    out.push('</g>');
+  } else if (season === 'autumn') {
+    out.push(`<rect width="${MAP_W}" height="${MAP_H}" fill="#c8742c" opacity=".08" clip-path="url(#land)"/>`);
+    for (const [x, y] of landPoints(geo, 'momiji', 60)) {
+      const col = ['#b8401f', '#d0682a', '#c99a2e', '#9c2f1c'][Math.floor(rnd() * 4)];
+      out.push(`<g transform="translate(${f1(x)},${f1(y)})" opacity=".85">`);
+      for (let k = 0; k < 6; k++) out.push(`<circle cx="${f1((rnd() - 0.5) * 12)}" cy="${f1((rnd() - 0.5) * 7)}" r="${f1(1.8 + rnd() * 2)}" fill="${col}"/>`);
+      out.push('</g>');
+    }
+    out.push('<g class="petals">');
+    for (let i = 0; i < 26; i++) {
+      out.push(`<path class="petal" d="M0,-3 L1,-1 L3,-1.2 L1.5,0.5 L2,3 L0,1.6 L-2,3 L-1.5,0.5 L-3,-1.2 L-1,-1Z" transform="translate(${f1(rnd() * MAP_W)},${f1(rnd() * MAP_H)})" fill="#c4521f" style="animation-delay:${(-rnd() * 14).toFixed(1)}s;animation-duration:${(11 + rnd() * 8).toFixed(1)}s"/>`);
+    }
+    out.push('</g>');
+  } else {
+    // Sommer: sattes Grün und Hitzeflimmern über den Feldern
+    out.push(`<rect width="${MAP_W}" height="${MAP_H}" fill="#7f9a3a" opacity=".07" clip-path="url(#land)"/>`);
+  }
+  out.push('</g>');
+  const svg = out.join('');
+  seasonCache.set(key, svg);
+  return svg;
+}
+
+// ---------------------------------------------------------------------------
+// Rahmen und Kompass
+// ---------------------------------------------------------------------------
+
+export function compassRose(x: number, y: number): string {
+  const dirs: [string, number][] = [['北', 0], ['東', 90], ['南', 180], ['西', 270]];
+  return `<g transform="translate(${x},${y})" pointer-events="none" opacity=".85">
+    <circle r="34" fill="#efe3c8" stroke="${INK}" stroke-width="1.4"/>
+    <circle r="27" fill="none" stroke="${INK}" stroke-width=".6" stroke-dasharray="2 3"/>
+    <path d="M0,-30 L5,0 L0,30 L-5,0Z" fill="${INK}" opacity=".85"/>
+    <path d="M-30,0 L0,-4 L30,0 L0,4Z" fill="${INK}" opacity=".45"/>
+    <path d="M0,-30 L5,0 L-5,0Z" fill="#a8261c"/>
+    ${dirs.map(([k, a]) => `<text x="${f1(Math.sin((a * Math.PI) / 180) * 45)}" y="${f1(-Math.cos((a * Math.PI) / 180) * 45 + 5)}" class="compass">${k}</text>`).join('')}
+  </g>`;
+}
+
+export function mapFrame(): string {
+  const c = (x: number, y: number, sx: number, sy: number) =>
+    `<path transform="translate(${x},${y}) scale(${sx},${sy})" d="M0,0 h34 v6 h-28 v28 h-6 Z M12,12 h12 v4 h-8 v8 h-4 Z" fill="#d9b45a" stroke="#5a3d1c" stroke-width=".8"/>`;
+  return `<g pointer-events="none">
+    <rect x="5" y="5" width="${MAP_W - 10}" height="${MAP_H - 10}" fill="none" stroke="#3b2a1a" stroke-width="10"/>
+    <rect x="13" y="13" width="${MAP_W - 26}" height="${MAP_H - 26}" fill="none" stroke="#d9b45a" stroke-width="1.6"/>
+    <rect x="17" y="17" width="${MAP_W - 34}" height="${MAP_H - 34}" fill="none" stroke="#3b2a1a" stroke-width=".6" opacity=".6"/>
+    ${c(10, 10, 1, 1)}${c(MAP_W - 10, 10, -1, 1)}${c(10, MAP_H - 10, 1, -1)}${c(MAP_W - 10, MAP_H - 10, -1, -1)}
+  </g>`;
+}
