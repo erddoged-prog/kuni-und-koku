@@ -36,6 +36,19 @@ Node liegt unter `C:\Program Files\nodejs` (in der Git-Bash ggf. `export PATH="$
 - Änderungen an Einheiten mit `npm run balance` prüfen (Ziel: bei gleichen Kosten 35–65 % im Schnitt).
 - Änderungen an Clans/KI mit `npm run kampagne -- --spiele 48` messen – mit 24 Spielen schwanken die Werte stark.
 
+## Stand (20.11.2026)
+
+- Schritte 1–6 fertig: Daten, Kampfsimulation, Kampagne, Karte/UI, Gegner-KI, Balancing-Scripts.
+- Karte im Tuschestil (gemaltes Land, Goldwolken, Burgen, Jahreszeiten), Armeen als ziehbare Spielfiguren.
+- Balancing: alle Einheiten 35–65 % bei gleichen Kosten; Clans nach 40 Runden Ø 3,9–7,4 Provinzen (48 KI-Spiele).
+- Testlink (privat): https://claude.ai/artifact/TH6TzPvB8VfYVkDFkpFtkN – nach Änderungen `npm run build`
+  und den Inhalt von `dist/` neu veröffentlichen.
+
+Offen:
+- Auf dem Handy noch nicht getestet (Ziehen mit dem Finger, Ladezeit des gemalten Landes).
+- Kitakaze bleibt schwächster Clan, Kurogane endet fast immer bei 7 Provinzen.
+- Agenten (Ninja/Shinobi) sind nur Platzhalter.
+
 ## Git
 
 - Eigenes Repo `erddoged-prog/kuni-und-koku`, Branch `main`.
