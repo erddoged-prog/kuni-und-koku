@@ -32,6 +32,11 @@ export interface AiConfig {
   warStrengthRatio: number;
   /** Frühestens ab dieser Runde Kriegserklärungen. */
   warFromTurn: number;
+  /**
+   * Krieg nur gegen Clans mit höchstens diesem Beziehungswert. Frieden treibt die Werte von selbst
+   * auf +30 – liegt die Grenze darunter, erklärt nach wenigen Runden niemand mehr Krieg.
+   */
+  warMaxRelation: number;
   /** Höchstens so viele Kriege gleichzeitig gegen große Clans (Unabhängige zählen nicht). */
   maxWars: number;
   /** Anteil des Einkommens, den der Unterhalt höchstens ausmachen darf (ruhige Lage / Bedrohung). */
@@ -60,6 +65,7 @@ export const DEFAULT_AI_CONFIG: AiConfig = {
   trials: 6,
   warStrengthRatio: 1.4,
   warFromTurn: 4,
+  warMaxRelation: 35,
   maxWars: 1,
   upkeepShareCalm: 0.65,
   upkeepShareThreat: 0.9,
@@ -114,6 +120,7 @@ class Turn {
     this.handleSieges();
     this.defend(sit);
     this.attack();
+    this.march();
     sit = this.situate();
     this.garrisonBorders(sit);
     this.recruit(sit);
@@ -352,7 +359,7 @@ class Turn {
     if (owner === this.clan || allied(this.s, this.clan, owner)) return false;
     const rel = relation(this.s, this.clan, owner);
     if (rel.state === 'war') return true;
-    if (this.s.turn < this.cfg.warFromTurn || this.warCount() >= this.cfg.maxWars || rel.value > 0) return false;
+    if (this.s.turn < this.cfg.warFromTurn || this.warCount() >= this.cfg.maxWars || rel.value > this.cfg.warMaxRelation) return false;
     return clanStrength(this.s, this.clan) >= clanStrength(this.s, owner) * this.cfg.warStrengthRatio;
   }
 
@@ -399,6 +406,50 @@ class Turn {
         if (this.s.armies[best.army.id]) this.apply(attackWithWar(this.s, best.army.id, best.to, best.tactic));
         progress = true; // die Armee ist jetzt beschäftigt, weiter mit den übrigen
       }
+    }
+  }
+
+  /**
+   * Marsch zur Front: Armeen, die nichts angreifen konnten und nicht an einer Front stehen,
+   * ziehen einen Schritt über eigenes/verbündetes Land Richtung nächster Front
+   * (Provinz mit einem angreifbaren Nachbarn, auch über Seewege).
+   */
+  private march() {
+    const isFront = (pid: ProvinceId) =>
+      neighborsOf(pid).some((n) => {
+        const o = this.s.provinces[n.id].owner;
+        return o !== this.clan && this.mayAttack(o);
+      });
+    const passable = (pid: ProvinceId) => allied(this.s, this.clan, this.s.provinces[pid].owner);
+    const sit = this.situate();
+    for (const army of this.freeArmies()) {
+      if (army.general.isDaimyo && army.units.length < this.cfg.minArmyUnits) continue;
+      const start = army.location;
+      if (isFront(start)) continue;
+      // Kernland nicht entblößen: bleibt ohne diese Armee genug gegen mögliche Angreifer (auch im Frieden)?
+      if (sit.own.includes(start) && sit.threat[start] > sit.defense[start] - armyPower(army.units, army.general.stars)) continue;
+      // Breitensuche über begehbares Land; merkt sich den ersten Schritt
+      const first = new Map<ProvinceId, ProvinceId>();
+      const queue: ProvinceId[] = [];
+      for (const n of neighborsOf(start)) {
+        if (!passable(n.id) || !canMove(this.s, army.id, n.id).ok || canMove(this.s, army.id, n.id).hostile) continue;
+        first.set(n.id, n.id);
+        queue.push(n.id);
+      }
+      let goal: ProvinceId | undefined;
+      while (queue.length && !goal) {
+        const pid = queue.shift()!;
+        if (isFront(pid)) goal = pid;
+        else {
+          for (const n of neighborsOf(pid)) {
+            if (n.id === start || first.has(n.id) || !passable(n.id)) continue;
+            first.set(n.id, first.get(pid)!);
+            queue.push(n.id);
+          }
+        }
+      }
+      if (!goal) continue;
+      if (this.apply(moveArmy(this.s, army.id, first.get(goal)!))) this.busy.add(army.id);
     }
   }
 

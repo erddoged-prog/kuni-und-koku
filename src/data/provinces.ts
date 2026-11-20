@@ -56,6 +56,7 @@ export const ADJACENCIES: Adjacency[] = [
   { a: 'chikuzen', b: 'bungo' },
   { a: 'chikuzen', b: 'nagato', sea: true },
   { a: 'bungo', b: 'iyo', sea: true },
+  { a: 'bungo', b: 'tosa', sea: true },
   // Shikoku
   { a: 'iyo', b: 'tosa' },
   { a: 'iyo', b: 'sanuki' },
