@@ -9,11 +9,15 @@ npm install
 npm run dev      # Spiel im Browser (http://localhost:5173)
 npm test         # Vitest
 npm run build    # statischer Build nach dist/
+npm run balance  # Siegquoten je Einheitenpaarung (siehe scripts/balance.ts)
 ```
+
+Balancing-Optionen: `npm run balance -- --n 500 --terrain hills --season winter --units 3 --budget 1500 --md balancing.md`
 
 ## Bedienung
 - **Provinz anklicken** → Seitenleiste: Gebäude bauen, Truppen ausheben, Garnison, Armeen.
-- **Banner anklicken** (oder „Bewegen“) → Zugziele leuchten: grün = eigenes Land, rot = Angriff.
+- **Spielfigur anklicken** (oder „Bewegen“) → Zugziele leuchten: grün = eigenes Land, rot = Angriff.
+- **Spielfigur ziehen** (Maus oder Finger) und auf einer Nachbarprovinz loslassen: gold = Zug, rot = Angriff, grau = nicht erlaubt.
 - **Angriff** → Taktik wählen (Angreifen/Halten/Flankieren/Rückzug), die Berater schätzen die Siegchance.
 - **Einheiten ankreuzen** → in neue Armee, Garnison oder andere Armee verlegen.
 - **Bei Angriff** (Auswahl an der Armee) = Taktik, wenn die KI euch angreift.
