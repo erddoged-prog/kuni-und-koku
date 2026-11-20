@@ -30,7 +30,10 @@ describe('Standard-KI', () => {
     let deepDebt = 0;
     for (let i = 0; i < 40 && !s.winner; i++) {
       s = endTurn(s, standardAi).state;
-      for (const c of Object.keys(s.clans)) if (c !== 'ronin' && !s.clans[c].isPlayer && s.clans[c].treasury < -300) deepDebt++;
+      // Nur Clans mit Land: eine heimatlose Armee hat kein Einkommen und muss zwangsläufig Schulden machen.
+      for (const c of Object.keys(s.clans)) {
+        if (c !== 'ronin' && !s.clans[c].isPlayer && provincesOf(s, c).length > 0 && s.clans[c].treasury < -300) deepDebt++;
+      }
     }
     const aiClans = ['kurogane', 'murasaki', 'matsukaze', 'kitakaze', 'aoyama'];
     const grown = aiClans.filter((c) => provincesOf(s, c).length > start[c]);

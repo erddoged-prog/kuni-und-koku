@@ -48,6 +48,9 @@ export interface AiConfig {
   minArmyUnits: number;
   /** Ab dieser Kasse gilt der Clan als reich: mehr Ausbau, mehr Rekruten. */
   richTreasury: number;
+  /** Ohne eigenes Land (kein Einkommen): niedrigere Schwellen für Angriffe. */
+  desperateRatio: number;
+  desperateWinChance: number;
 }
 
 export const DEFAULT_AI_CONFIG: AiConfig = {
@@ -66,6 +69,8 @@ export const DEFAULT_AI_CONFIG: AiConfig = {
   maxRecruitsPerTurn: 2,
   minArmyUnits: 4,
   richTreasury: 3000,
+  desperateRatio: 0.6,
+  desperateWinChance: 0.3,
 };
 
 const ROLES: UnitRole[] = ['spear', 'cavalry', 'ranged', 'sword'];
@@ -346,6 +351,10 @@ class Turn {
 
   private attack() {
     const winter = seasonOf(this.s.turn).attrition > 0;
+    // Ohne eigenes Land gibt es kein Einkommen: dann lieber riskant angreifen als verhungern.
+    const desperate = provincesOf(this.s, this.clan).length === 0;
+    const minRatio = desperate ? this.cfg.desperateRatio : this.cfg.minPowerRatio;
+    const minChance = desperate ? this.cfg.desperateWinChance : this.cfg.minWinChance;
     let progress = true;
     while (progress) {
       progress = false;
@@ -365,12 +374,12 @@ class Turn {
           const targetIsThreat = armiesIn(this.s, n.id).some((a) => this.hostility(a.owner) === 1);
           if (!homeSafe && !targetIsThreat) continue;
           const castle = castleLevel(this.s, n.id) > 0 && target.garrison.length > 0;
-          if (winter && castle) continue; // Winterbelagerung zermürbt nur
+          if (winter && castle && !desperate) continue; // Winterbelagerung zermürbt nur
           const opp = this.opposition(n.id);
-          if (opp > 0 && power < opp * this.cfg.minPowerRatio) continue;
+          if (opp > 0 && power < opp * minRatio) continue;
           const est = this.estimate((t, tac) => attackWithWar(t, army.id, n.id, tac), ['attack', 'hold', 'flank']);
           const chance = est.chance ?? 1;
-          if (chance < this.cfg.minWinChance) continue;
+          if (chance < minChance) continue;
           // Belagerung bindet die Armee: Wert gegen Dauer abwägen.
           const siegeFactor = castle ? 1 / (1 + castleLevel(this.s, n.id)) : 1;
           const score = this.provinceValue(n.id) * chance * siegeFactor * (targetIsThreat ? 1.5 : 1);
